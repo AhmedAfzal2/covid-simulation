@@ -25,6 +25,22 @@ fetch(
         addCountryBorders(data, map);
 });
 
+const airportIcon = L.icon({
+    iconUrl: 'icons/airport.svg',
+    iconSize: [16, 16],
+    iconAnchor: [8, 16]
+})
+
+Papa.parse("data/filtered_airports.csv", {
+    download: true,
+    dynamicTyping: true,
+    complete: (airports) => {
+        airports.data.forEach(coords => {
+            L.marker(coords, {icon: airportIcon}).addTo(map);
+        });
+    }
+})
+
 function addCountryBorders(data, map) {
     L.geoJSON(data, {
         style: borderStyle(),
@@ -49,7 +65,8 @@ function highlightedStyle() {
 function addEvents(feature, layer) {
     layer.on({
         mouseover: highlightCountry,
-        mouseout: resetCountry
+        mouseout: resetCountry,
+        click: () => countryClick(feature)
     })
 }
 
@@ -59,4 +76,8 @@ function highlightCountry(e) {
 
 function resetCountry(e) {
     e.target.setStyle(borderStyle())
+}
+
+function countryClick(feature) {
+    console.log(feature.properties.name)
 }

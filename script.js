@@ -31,7 +31,7 @@ const airportIcon = L.icon({
     iconAnchor: [8, 16]
 })
 
-Papa.parse("data/filtered_airports.csv", {
+Papa.parse("data/filtered_airport_coords.csv", {
     download: true,
     dynamicTyping: true,
     complete: (airports) => {
@@ -80,4 +80,33 @@ function resetCountry(e) {
 
 function countryClick(feature) {
     console.log(feature.properties.name)
+}
+
+const switchTab = document.getElementById('switch-tab')
+const mapDiv = document.getElementById('map')
+const graphDiv = document.getElementById('graph')
+switchTab.addEventListener('click', () => {
+    mapDiv.classList.toggle("active")
+    graphDiv.classList.toggle("active")
+    console.log('switch')
+})
+
+fetch('http://localhost:5000/graph')
+    .then(response => response.json())
+    .then(data => {
+        drawGraph(data);
+    })
+
+
+
+function drawGraph(data) {
+    const graph = new graphology.Graph();
+    data.nodes.forEach(n => {
+        graph.addNode(n.id, n);
+    });
+    data.edges.forEach(e => {
+        graph.addEdge(e.from, e.to);
+    });
+
+    const renderer = new Sigma(graph, graphDiv);
 }

@@ -34,3 +34,9 @@ html, body {
     z-index: 1000;
     cursor: pointer;
 }
+
+#step {
+    position: absolute;
+    z-index: 1000;
+    right: 0;
+}

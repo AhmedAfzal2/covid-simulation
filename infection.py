@@ -65,6 +65,7 @@ def travel(g: ig.Graph):
     # 2d array to 'buffer' changes in populations of each city
     # changes[n][0] represents change in exposed for nth city, 1 is infected
     changes = [[0 for i in range(2)] for i in range(g.vcount())]
+    highlight_edges = set()
     
     for vi in range(g.vcount()):
         v = g.vs[vi]
@@ -88,14 +89,15 @@ def travel(g: ig.Graph):
 
                 exposed_travelers = np.random.binomial(n, min(v['E'] / population, 1))     # incorporates randomness
                 infected_travelers = np.random.binomial(n, min(v['I'] / population, 1))
+                
+                # highlight when the infection spreads across countries
+                if exposed_travelers + infected_travelers > 0 and e['type'] == 'a' and target['E'] + target['I'] == 0:
+                    highlight_edges.add(e.index)
             
                 changes[vi][0] -= exposed_travelers
                 changes[vi][1] -= infected_travelers
                 changes[target_i][0] += exposed_travelers
                 changes[target_i][1] += infected_travelers
-                    
-                if exposed_travelers + infected_travelers > 0:
-                    pass    # edge color
         
     changed = []
     for i in range(len(changes)):
@@ -108,4 +110,4 @@ def travel(g: ig.Graph):
                 g.vs[i]['I'] = 0
             changed.append(i)
             
-    return changed
+    return changed, list(highlight_edges)

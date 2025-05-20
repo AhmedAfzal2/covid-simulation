@@ -3,7 +3,8 @@ html, body {
     padding: 0;
     height: 100%;
     overflow: hidden;
-    --option_bg: rgba(0, 0, 0, 0.5)
+    font-family:'Courier New', Courier, monospace;
+    --option_bg: rgba(64, 64, 64, 0.5);
 }
 
 #map {
@@ -17,6 +18,7 @@ html, body {
     position: absolute;
     height: 100vh;
     width: 100vw;
+    background-color: #0e1422;
 }
 
 .tab {
@@ -27,16 +29,70 @@ html, body {
     display: block;
 }
 
+#overlay {
+    position: absolute;
+    height: 100vh;
+    width: 100vw;
+    padding: 1%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+#overlay * {
+    pointer-events: auto;
+}
+
 #switch-tab {
     color: white;
-    background-color: var(--option_bg);
     position: absolute;
-    z-index: 1000;
+    background-color: var(--option_bg);
     cursor: pointer;
+    padding: 0.3em;
+    border: solid 1px white;
 }
 
 #step {
     position: absolute;
-    z-index: 1000;
-    right: 0;
+    right: 4em;
+}
+
+#country-name {
+    position: absolute;
+    background-color: var(--option_bg);
+    bottom: 30px;
+    padding: 1rem;
+    height: 12%;
+    border: solid 1px white;
+    width: 25%;
+    left: -20px;
+    color: white
+}
+
+#country-name li {
+    float: left;
+    list-style: none;
+    font-size: 1.3rem;
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
+
+#country-name img {
+    height: 1.5rem;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+}
+
+ul {
+    padding: 0;
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+}
+
+.heading {
+    font-size: 1.6rem;
+    font-weight: bold;
+    width: 100%;
+    padding-left: 2rem;
 }

@@ -34,7 +34,7 @@ INCUBATION_PERIOD = 14
 RECOVERY_PERIOD = 20
 IMMUNITY_LOSS_TIME = 100
 DEVELOPMENT_FACTOR = 1 / 3
-MORTALITY = 0.005
+MORTALITY = 0.001
 
 # returns the number of S, E, I, R, D people in the next step
 # population density and human development are used to calculate parameters of SEIRD model
@@ -61,44 +61,51 @@ def rk4_step(f, y, t, dt, *args):
     k4 = f(y + dt * k3, t + dt, *args)
     return y + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
 
-def travel(g: ig.Graph):
+def travel(g: ig.Graph, ajl):
     # 2d array to 'buffer' changes in populations of each city
     # changes[n][0] represents change in exposed for nth city, 1 is infected
-    changes = [[0 for i in range(2)] for i in range(g.vcount())]
+    vcount = g.vcount()
+    changes = [[0 for i in range(2)] for i in range(vcount)]
+    Es = g.vs['E']
+    Is = g.vs['I']
+    pops = g.vs['population']
+    Ds = g.vs['D']
     highlight_edges = set()
     
-    for vi in range(g.vcount()):
-        v = g.vs[vi]
-        # travel is only relevant for infected or exposed people
-        # we can ignore others and assume they cancel out across populations
-        if v['I'] > 0 or v['E'] > 0:
-            population = max(v['population'] - v['D'], v['S'] + v['E'] + v['I'] + v['R'])   # exclude dead people
-            for edge in g.incident(v):
-                e = g.es[edge]
-                target_i = e.source if e.target == vi else e.target
-                target = g.vs[target_i]
-                target_population = target['population'] - target['D']
-                if e['type'] == 'c':
-                    # determining number of people travelling with a 'gravity' approach
-                    n = max(1, min(population * target_population // ((e['weight'] * 1000) ** 2 + 2), population // 100))
-                    
-                else:
-                    # 1 flight per 100000 people assumed
-                    # each flight contains between 50 and 400 people randomly
-                    n = max(1, min(rd.randint(1, population // 100000 + 1) * rd.randint(50, 400), population // 100))
+    # travel is only relevant for infected or exposed people
+    # we can ignore others and assume they cancel out across populations
+    active_cities = [i for i in range(vcount) if Es[i] > 0 or Is[i] > 0]
 
-                exposed_travelers = np.random.binomial(n, min(v['E'] / population, 1))     # incorporates randomness
-                infected_travelers = np.random.binomial(n, min(v['I'] / population, 1))
-                
-                # highlight when the infection spreads across countries
-                if exposed_travelers + infected_travelers > 0 and e['type'] == 'a' and target['E'] + target['I'] == 0:
-                    highlight_edges.add(e.index)
+    for vi in active_cities:
+        pop = max(pops[vi] - Ds[vi], Es[vi] + Is[vi] + g.vs[vi]['S'] + g.vs[vi]['R'])   # exclude dead people
+        if pop == 0:
+            continue
+
+        edges = ajl[vi]
+        for e in edges:
+            target_i = e[0] if e[1] == vi else e[1]
             
-                changes[vi][0] -= exposed_travelers
-                changes[vi][1] -= infected_travelers
-                changes[target_i][0] += exposed_travelers
-                changes[target_i][1] += infected_travelers
+            target_pop = pops[target_i] - Ds[target_i]
+            if e[3] == 'c':
+                # determining number of people travelling with a 'gravity' approach
+                n = max(1, min(pop * target_pop // ((e[2] * 1000) ** 2 + 2), pop // 100))
+                
+            else:
+                # 1 flight per 100000 people assumed
+                # each flight contains between 50 and 400 people randomly
+                n = max(1, min(rd.randint(1, pop // 100000 + 1) * rd.randint(50, 400), pop // 100))
+            exposed_travelers = np.random.binomial(n, min(Es[vi] / pop, 1))     # incorporates randomness
+            infected_travelers = np.random.binomial(n, min(Is[vi] / pop, 1))
+            
+            # highlight when the infection spreads across countries
+            if exposed_travelers + infected_travelers > 0 and e[3] == 'a' and Es[target_i] + Is[target_i] == 0:
+                highlight_edges.add(e[4])
         
+            changes[vi][0] -= exposed_travelers
+            changes[vi][1] -= infected_travelers
+            changes[target_i][0] += exposed_travelers
+            changes[target_i][1] += infected_travelers
+    
     changed = []
     for i in range(len(changes)):
         if changes[i][0] != 0 and changes[i][1] != 0:

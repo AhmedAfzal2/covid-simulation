@@ -34,17 +34,22 @@ def load_graph(node_file, edge_file):
     edge_list = pd.read_csv(edge_file, header=None)
     edge_list.columns = ['src', 'dest', 'weight', 'type', 'in_mst']
     edges = list(zip(edge_list['src'], edge_list['dest']))
+    ajl = [[] for i in range(g.vcount())]   # adjacency list
     
     g.add_edges(edges)
     g.es['weight'] = edge_list['weight'].tolist()
     g.es['type'] = edge_list['type'].tolist()
     g.es['in_mst'] = edge_list['in_mst'].tolist()
     
+    for e in g.es:
+        ajl[e.source].append([e.source, e.target, e['weight'], e['type'], e.index])
+        ajl[e.target].append([e.source, e.target, e['weight'], e['type'], e.index])
+    
     g.vs[3901]['S'] -= 10000
     g.vs[3901]['E'] += 5000
     g.vs[3901]['I'] += 5000
     
-    return g, countries
+    return g, countries, ajl
 
 def resetGraph():
     g.vs['S'] = g.vs['population']
@@ -97,7 +102,7 @@ def getRadius(population):
     p = min(population, MAX_POPULATION)
     return MIN_RADIUS + (p / MAX_POPULATION) * (MAX_RADIUS - MIN_RADIUS)
 
-g, countries = load_graph('data/node_list.csv', 'data/edge_list_type.csv')
+g, countries, ajl = load_graph('data/node_list.csv', 'data/edge_list_type.csv')
 app = Flask(__name__)
 CORS(app)
 
@@ -149,7 +154,7 @@ def getUpdate():
     e = t.time()
     print(e - s)
     
-    changed, edges = inf.travel(g)
+    changed, edges = inf.travel(g, ajl)
     s = t.time()
     print(s - e)
     for i in changed:

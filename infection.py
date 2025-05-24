@@ -27,7 +27,7 @@ def diff_eq(initial, t, N, infct, incub, recov, immloss, death):
     
     return np.array([dSdt, dEdt, dIdt, dRdt, dDdt])
 
-INFECTION_RATE = 0.4
+INFECTION_RATE = 0.3
 DENSITY_FACTOR = 0.5
 BASELINE_DENSITY = 100
 INCUBATION_PERIOD = 14
@@ -61,60 +61,127 @@ def rk4_step(f, y, t, dt, *args):
     k4 = f(y + dt * k3, t + dt, *args)
     return y + dt * (k1 + 2*k2 + 2*k3 + k4) / 6
 
-def travel(g: ig.Graph, ajl):
-    # 2d array to 'buffer' changes in populations of each city
-    # changes[n][0] represents change in exposed for nth city, 1 is infected
+def travel(g: ig.Graph):
     vcount = g.vcount()
-    changes = [[0 for i in range(2)] for i in range(vcount)]
+    changes = [[0, 0] for i in range(vcount)]   # [E, I]
     Es = g.vs['E']
     Is = g.vs['I']
-    pops = g.vs['population']
-    Ds = g.vs['D']
+    Ps = [g.vs[i]['population'] - g.vs[i]['D'] for i in range(vcount)]
     highlight_edges = set()
     
-    # travel is only relevant for infected or exposed people
-    # we can ignore others and assume they cancel out across populations
-    active_cities = [i for i in range(vcount) if Es[i] > 0 or Is[i] > 0]
-
-    for vi in active_cities:
-        pop = max(pops[vi] - Ds[vi], Es[vi] + Is[vi] + g.vs[vi]['S'] + g.vs[vi]['R'])   # exclude dead people
-        if pop == 0:
-            continue
-
-        edges = ajl[vi]
-        for e in edges:
-            target_i = e[0] if e[1] == vi else e[1]
-            
-            target_pop = pops[target_i] - Ds[target_i]
-            if e[3] == 'c':
-                # determining number of people travelling with a 'gravity' approach
-                n = max(1, min(pop * target_pop // ((e[2] * 1000) ** 2 + 2), pop // 100))
-                
-            else:
-                # 1 flight per 100000 people assumed
-                # each flight contains between 50 and 400 people randomly
-                n = max(1, min(rd.randint(1, pop // 100000 + 1) * rd.randint(50, 400), pop // 100))
-            exposed_travelers = np.random.binomial(n, min(Es[vi] / pop, 1))     # incorporates randomness
-            infected_travelers = np.random.binomial(n, min(Is[vi] / pop, 1))
-            
-            # highlight when the infection spreads across countries
-            if exposed_travelers + infected_travelers > 0 and e[3] == 'a' and Es[target_i] + Is[target_i] == 0:
-                highlight_edges.add(e[4])
+    # iterate over every edge
+    for e in g.es:
+        src = e.source
+        dst = e.target
         
-            changes[vi][0] -= exposed_travelers
-            changes[vi][1] -= infected_travelers
-            changes[target_i][0] += exposed_travelers
-            changes[target_i][1] += infected_travelers
+        if Es[src] + Is[src] == 0 and Es[dst] + Is[dst] == 0:
+            continue
+        
+        grav = max(10, int(10 * math.log(max(1, Ps[src] * Ps[dst] // ((e['weight']) ** 2 + 1)))))
+        
+        if e['quarantined']:
+            # no international travel
+            if e['type'] == 'a':
+                continue
+            else:   # minimal national travel
+                grav = grav // 10
+                
+            
+        n1 = rd.randint(grav - 10, grav + 10)
+        n2 = rd.randint(grav - 10, grav + 10)
+        
+        n1 = max(0, n1)
+        n2 = max(0, n2)
+        
+        inf_to_dst = min(np.random.binomial(n1, Is[src] / Ps[src]), Is[src])
+        exp_to_dst = min(np.random.binomial(n1, Es[src] / Ps[src]), Es[src])
+
+        inf_to_src = min(np.random.binomial(n2, Is[dst] / Ps[dst]), Is[dst])
+        exp_to_src = min(np.random.binomial(n2, Es[dst] / Ps[dst]), Es[dst])
+        
+        total_to_dst = inf_to_dst + exp_to_dst
+        total_to_src = inf_to_src + exp_to_src
+        
+        if total_to_dst > 0 and Es[dst] + Is[dst] == 0:
+            highlight_edges.add(e.index)
+        elif total_to_src > 0 and Es[src] + Is[src] == 0:
+            highlight_edges.add(e.index)
+            
+        changes[src][0] += exp_to_src - exp_to_dst
+        changes[src][1] += inf_to_src - inf_to_dst
+        changes[dst][0] += exp_to_dst - exp_to_src
+        changes[dst][1] += inf_to_dst - inf_to_src
+        
+        Es[src] += exp_to_src - exp_to_dst
+        Es[dst] += exp_to_dst - exp_to_src
+        Is[src] += inf_to_src - inf_to_dst
+        Is[dst] += inf_to_dst - inf_to_src
+        Ps[src] += exp_to_src + inf_to_src - exp_to_dst - inf_to_dst
+        Ps[dst] += exp_to_dst + inf_to_dst - exp_to_src - inf_to_src
     
     changed = []
-    for i in range(len(changes)):
-        if changes[i][0] != 0 and changes[i][1] != 0:
-            g.vs[i]['E'] += changes[i][0]
-            g.vs[i]['I'] += changes[i][1]
-            if g.vs[i]['E'] < 0:
-                g.vs[i]['E'] = 0
-            if g.vs[i]['I'] < 0:
-                g.vs[i]['I'] = 0
-            changed.append(i)
-            
+    for v in range(vcount):
+        if changes[v][0] != 0 or changes[v][1] != 0:
+            g.vs[v]['E'] += changes[v][0]
+            g.vs[v]['I'] += changes[v][1]
+            changed.append(v)
+        
     return changed, list(highlight_edges)
+
+def quarantine(g: ig.Graph, country, cities):
+    MINIMUM_INF = 0.01          # minimum % of population infected before quarantine can happen
+    MAXIMUM_VAX = 0.05          # maximum % of population vaccinated for quarantine to not happen
+    CHANCE_PER_POP = 0.1        # chance of quarantine per % of population infected
+    DEVELOPMENT_FACTOR = 1      # more developed -> higher quarantine chance
+    
+    inf = country[0] / country[3]
+    if inf < MINIMUM_INF:
+        return False
+    
+    vax = 0 if country[4] == 0 else country[0] / country[4]
+    if vax > MAXIMUM_VAX:
+        return False
+    
+    if rd.random() < CHANCE_PER_POP * DEVELOPMENT_FACTOR * g.vs[cities[0]]['hdi'] * inf:
+        for city_id in cities:
+            for e in g.incident(city_id, mode='ALL'):
+                g.es[e]['quarantined'] = True
+        return True
+    return False
+
+def vax_route(g, countries):
+    VAX_BASELINE = 150      # vaccine will appear after ~100 days
+    hdis = []
+    for country in countries:
+        hdis.append((country, g.vs[countries[country][0]]['hdi']))
+    
+    hdis.sort(key=lambda x: x[1])
+    # biased shuffle - randomness with general trend for higher values
+    vax_order = [c[0] for c in sorted(hdis, key=lambda x: rd.random() / (hdis.index(x) + 1) ** 4)]
+    
+    vax_time = rd.randint(VAX_BASELINE, VAX_BASELINE + 50)
+        
+    return vax_order[::-1], vax_time
+
+def vaccinate(city, day):
+    VAX_BASELINE_RATE = 0.001       # per day, 0.1% of people vaccinated
+    VAX_ACCELERATION = 0.0001        # per day, rate increases by 0.0001
+    DEVELOPMENT_FACTOR = 4
+    
+    if city['V'] == 0:      # vaccine hasnt arrived in city yet
+        if rd.random() < 0.7:
+            return          # random chance
+    
+    pop = city['S'] + city['E'] + city['I'] + city['R']
+    n = np.random.binomial(pop, (VAX_BASELINE_RATE + VAX_ACCELERATION * math.sqrt(day)) * DEVELOPMENT_FACTOR * city['hdi'])
+    
+    total = 0
+    for s in ['S', 'E', 'I', 'R']:
+        reduction = int(n * city[s] / pop)
+        city[s] = max(0, city[s] - reduction)
+        total += reduction
+    
+    remaining = n - total
+    city['S'] = max(0, city['S'] - remaining)
+    
+    city['V'] += n

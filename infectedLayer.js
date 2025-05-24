@@ -34,21 +34,29 @@ class InfectedLayer extends L.Layer {
     this._reset();
   }
 
+  zoomScale(zoom) {
+    return Math.pow((1 + (zoom - 2.95) / (18 - 2.95)), 5)
+  }
+
   _reset = () => {
     const map = this._map;
     const size = map.getSize();
+    const topLeft = map.containerPointToLayerPoint([0, 0]);
+    const zoom = map.getZoom()
+
+    L.DomUtil.setPosition(this._canvas, topLeft)
 
     this._canvas.width = size.x;
     this._canvas.height = size.y;
 
     const ctx = this._ctx;
     ctx.clearRect(0, 0, size.x, size.y);
-    ctx.fillStyle = this.options.color || 'red';
 
     for (const node of this.nodes) {
+      ctx.fillStyle = node.color;
       const point = map.latLngToContainerPoint([node.lat, node.lon]);
       ctx.beginPath();
-      ctx.arc(point.x, point.y, node.radius, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, node.radius * this.zoomScale(zoom), 0, Math.PI * 2);
       ctx.fill();
     }
   };

@@ -12,12 +12,15 @@ html, body {
     width: 100vw;
     position: absolute;
     padding: 1%;
+    background-color: #888;
 }
 
 #graph {
     position: absolute;
     height: 100vh;
     width: 100vw;
+    padding-top: 2.6rem;
+    padding-left: 0.5rem;
     background-color: #0e1422;
 }
 
@@ -42,18 +45,64 @@ html, body {
     pointer-events: auto;
 }
 
+#top-left {
+    position: absolute;
+}
+
+#chart-button {
+    height: 2rem;
+    background-color: var(--option_bg);
+    border: solid 1px white;
+    cursor: pointer;
+}
+
 #switch-tab {
     color: white;
-    position: absolute;
     background-color: var(--option_bg);
     cursor: pointer;
     padding: 0.3em;
     border: solid 1px white;
 }
 
-#step {
+#top-right {
     position: absolute;
-    right: 4em;
+    right: 3rem;
+}
+
+#controls {
+    box-sizing: border-box;
+    width: 12rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    background-color: var(--option_bg);
+    display: flex;
+    justify-content: space-between;
+    border: solid 1px white;
+}
+
+#center {
+    height: 2rem;
+    background-color: var(--option_bg);
+    border: solid 1px white;
+    position: absolute;
+    right: 3rem;
+    bottom: 3rem;
+}
+
+#day {
+    text-align: right;
+    position: absolute;
+    right: 0px;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    background-color: var(--option_bg);
+    color: white;
+    font-size: 1.5rem;
+    border: solid 1px white;
+}
+
+#play-pause, #speed1, #speed2 {
+    height: 3rem;
 }
 
 #country-name {
@@ -95,4 +144,49 @@ ul {
     font-weight: bold;
     width: 100%;
     padding-left: 2rem;
+}
+
+#chart-container {
+    display: none;
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0,0,0,0.4);
+    z-index: 1100;
+    justify-content: center;
+    align-items: center;
+}
+
+#chart-content {
+    background-color: #fff;
+    padding: 20px;
+    padding-top: 10px;
+    border-radius: 16px;
+    border: solid 4px #888;
+}
+
+.close {
+    font-size: 2rem;
+    cursor: pointer;
+    position: absolute;
+}
+
+.leaflet-dragging,
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-container {
+  cursor: default;
+}
+
+.leaflet-grab,
+.leaflet-interactive,
+.leaflet-container {
+  cursor: default;
+}
+
+.leaflet-infected-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 400;
 }

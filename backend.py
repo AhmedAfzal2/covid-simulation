@@ -182,7 +182,7 @@ def precompute_updates():
         # append to buffer
         with buffer_lock:
             update_buffer.append({'nodes': nodes, 'edges': edges, 'countries': toSendCountries, 'quarantined': q})
-            
+         
+th.Thread(target=precompute_updates, daemon=True).start()
 if __name__ == '__main__':
-    th.Thread(target=precompute_updates, daemon=True).start()
     app.run(debug=True)

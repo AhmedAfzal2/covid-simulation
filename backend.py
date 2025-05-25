@@ -115,6 +115,7 @@ def getUpdate():
             
 def precompute_updates():
     global vax_delay, day
+    print('thread started')
     while True:
         t.sleep(0.1)
         with buffer_lock:

@@ -21,7 +21,7 @@ L.tileLayer(
 
 // country borders
 fetch(
-"data/countries.geo.json"
+"/static/data/countries.geo.json"
 )
     .then((response) => response.json())
     .then((data) => {
@@ -30,7 +30,7 @@ fetch(
 
 let countryInfo = {};
 // graph data
-fetch('http://localhost:5000/graph')
+fetch('/graph')
     .then(response => response.json())
     .then(data => {
         drawGraph(data);
@@ -39,13 +39,13 @@ fetch('http://localhost:5000/graph')
     });
 
 const airportIcon = L.icon({
-    iconUrl: 'icons/airport.svg',
+    iconUrl: "/static/icons/airport.svg",
     iconSize: [12, 12],
     iconAnchor: [6, 12]
 });
 
 const airports = {}
-Papa.parse("data/filtered_airport_coords.csv", {
+Papa.parse("/static/data/filtered_airport_coords.csv", {
     download: true,
     dynamicTyping: true,
     complete: (file) => {
@@ -241,10 +241,10 @@ playPause.addEventListener('click', () => {
     if (!state) {
         state = !state;
         step();
-        playPause.src = 'icons/pause.svg';
+        playPause.src = "/static/icons/pause.svg";
     } else {
         state = !state;
-        playPause.src = 'icons/play.svg';
+        playPause.src = "/static/icons/play.svg";
     }
 });
 
@@ -275,7 +275,7 @@ async function step() {
         updateNodes(stepData);
 
     try {
-        const response = await fetch('http://localhost:5000/update');
+        const response = await fetch('/update');
         const data = await response.json();
         day += 1;
         dayDiv.textContent = `Day ${day}`
@@ -497,12 +497,12 @@ document.getElementById('submit').addEventListener('click', (e) => {
     speed1.style.backgroundColor = optionbg;
     speed2.style.backgroundColor = optionbg;
     state = false;
-    document.getElementById('play-pause').src = 'icons/play.svg';
+    document.getElementById('play-pause').src = "/static/icons/play.svg";
     e.preventDefault();
 
     const formData = new FormData(document.getElementById('settings-form'));
 
-    fetch('http://localhost:5000/settings', {method: 'POST', body: formData})
+    fetch('/settings', {method: 'POST', body: formData})
     .then(response => response.text())
     .then(data => {
         console.log(data);

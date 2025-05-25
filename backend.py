@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from collections import deque
 from flask_cors import CORS
 import infection as inf
@@ -48,6 +48,10 @@ immunity_loss_time = 100
 mortality_rate = 0.001
 quarantine = True
 vaccination = True
+
+@app.route('/')
+def home():
+    return render_template('index.html')
 
 # initial graph sent to front-end
 @app.route('/graph')

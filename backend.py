@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from collections import deque
 from flask_cors import CORS
 import infection as inf
@@ -41,6 +41,14 @@ buffer_lock = th.Lock()
 app = Flask(__name__)
 CORS(app)
 
+infection_rate = 0.3
+incubation_period = 14
+recovery_period = 20
+immunity_loss_time = 100
+mortality_rate = 0.001
+quarantine = True
+vaccination = True
+
 # initial graph sent to front-end
 @app.route('/graph')
 def getGraph():
@@ -74,6 +82,21 @@ def getGraph():
             'radius': gt.getRadius(2000, 0)
             }
         })
+    
+@app.route('/settings', methods=['POST'])
+def updateSettings():
+    global infection_rate, incubation_period, recovery_period, immunity_loss_time, mortality_rate, quarantine, vaccination
+    settings = request.form
+    infection_rate = float(settings.get('infection_rate'))
+    incubation_period = float(settings.get('incubation_period'))
+    recovery_period = float(settings.get('recovery_period'))
+    immunity_loss_time = float(settings.get('immunity_loss'))
+    mortality_rate = float(settings.get('mortality_rate'))
+    quarantine = bool(settings.get('quarantine'))
+    vaccination = bool(settings.get('vaccination'))
+    print(f"New Settings: {[infection_rate, incubation_period, recovery_period, immunity_loss_time, mortality_rate, quarantine, vaccination]}")
+    resetGraph()
+    return "Received settings"
 
 # at every step, send updates to the graph
 @app.route('/update')
@@ -99,8 +122,9 @@ def precompute_updates():
         nodes = []
         for v in g.vs:
             if v['E'] + v['I'] > 0:
-                v['S'], v['E'], v['I'], v['R'], v['D'] = inf.get_next_city_step(v['S'], v['E'], v['I'], v['R'], v['D'], v['density'], v['hdi'])
-                if v['country'] in vaccinated:
+                rates = [infection_rate, incubation_period, recovery_period, immunity_loss_time, mortality_rate]
+                v['S'], v['E'], v['I'], v['R'], v['D'] = inf.get_next_city_step(v['S'], v['E'], v['I'], v['R'], v['D'], v['density'], v['hdi'], rates)
+                if vaccination and v['country'] in vaccinated:
                     inf.vaccinate(v, day)
                 nodes.append({
                     'id': v.index,
@@ -124,24 +148,26 @@ def precompute_updates():
         
         q = ''
         toSendCountries = gt.sendCountries(g, countries)
-        for country, info in toSendCountries.items():
-            if country == 'World' or country in quarantined:
-                continue
-            if inf.quarantine(g, info, countries[country]):
-                q = country
-                quarantined[country] = rd.randint(10, 40)   # quarantine duration
-                break   # only one country can quarantine per step
-            
-        for country in list(quarantined.keys()):
-            quarantined[country] -= 1
-            if quarantined[country] < 0:
-                for city_id in countries[country]:
-                    for e in g.incident(city_id, mode='ALL'):
-                        g.es[e]['quarantined'] = False
-                del quarantined[country]
-                q = country
+        
+        if quarantine:
+            for country, info in toSendCountries.items():
+                if country == 'World' or country in quarantined:
+                    continue
+                if inf.quarantine(g, info, countries[country]):
+                    q = country
+                    quarantined[country] = rd.randint(10, 40)   # quarantine duration
+                    break   # only one country can quarantine per step
                 
-        if vax_delay <= 0 and len(vax_order) > 0:
+            for country in list(quarantined.keys()):
+                quarantined[country] -= 1
+                if quarantined[country] < 0:
+                    for city_id in countries[country]:
+                        for e in g.incident(city_id, mode='ALL'):
+                            g.es[e]['quarantined'] = False
+                    del quarantined[country]
+                    q = country
+                
+        if vaccination and vax_delay <= 0 and len(vax_order) > 0:
             for i in range(rd.randint(0, 3)):   # 0-3 countries get vaccine per day
                 if len(vax_order) > 0:
                     vaccinated.add(vax_order.pop())
@@ -153,7 +179,6 @@ def precompute_updates():
         with buffer_lock:
             update_buffer.append({'nodes': nodes, 'edges': edges, 'countries': toSendCountries, 'quarantined': q})
             
-
 if __name__ == '__main__':
     th.Thread(target=precompute_updates, daemon=True).start()
     app.run(debug=True)

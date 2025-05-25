@@ -165,10 +165,11 @@ function countryClick(feature) {
 const switchTab = document.getElementById('switch-tab');
 const mapDiv = document.getElementById('map');
 const graphDiv = document.getElementById('graph');
-const graph = new graphology.Graph();
+const graph = new graphology.Graph({multi: true});
 const countries = {}
 let firstSwitch = true;
 
+let renderer;
 // creates graph and initializes renderer
 function drawGraph(data) {
     data.nodes.forEach(n => {
@@ -179,16 +180,16 @@ function drawGraph(data) {
         try {
             graph.addEdgeWithKey(e.id, e.from, e.to, {'color': 'rgb(37, 58, 109)'});
         }
-        catch {}
+        catch (e){console.log(e)}
     });
 
-    const renderer = new Sigma(graph, graphDiv, {
+    renderer = new Sigma(graph, graphDiv, {
         allowInvalidContainer: true,
         mouseEnabled: false
     });
 
     switchTab.addEventListener('click', () => {
-        onSwitchTabClick(renderer)
+        onSwitchTabClick();
     });
 
     const n = data.startNode
@@ -197,7 +198,7 @@ function drawGraph(data) {
     infectedLayer.setNodes(Object.values(infectedNodes));
 }
 
-function onSwitchTabClick(renderer) {
+function onSwitchTabClick() {
     mapDiv.classList.toggle("active")
     graphDiv.classList.toggle("active")
     if (graphDiv.classList.contains("active")) {
@@ -215,7 +216,7 @@ function onSwitchTabClick(renderer) {
 }
 
 // fix the camera in one spot
-function clampCamera(renderer) {
+function clampCamera() {
     // const camera = renderer.getCamera();
     // camera.setState({
     //         x: 0.492,
@@ -269,7 +270,6 @@ async function step() {
     // paused, dont do anything
     if (!state)
         return;
-
 
     if (stepData)
         updateNodes(stepData);
@@ -359,8 +359,9 @@ function highlightEdge(edge) {
             graph.setEdgeAttribute(edge, 'size', 1);
         }, 500);
     } else {
-        const src = graph.source(edge);
-        const dest = graph.target(edge);
+        const src = Number(graph.source(edge));
+        const dest = Number(graph.target(edge));
+        console.log(src, dest, 'e')
         if (!(src in airports) || !(dest in airports))
             return;
         const line = L.polyline([airports[src], airports[dest]], {
@@ -379,7 +380,7 @@ const chartButton = document.getElementById('chart-button');
 chartButton.addEventListener('click', () => displayChart());
 document.querySelector('.close').addEventListener('click', () => {
     document.getElementById('chart-container').style.display = 'none';
-})
+});
 
 let chart = null;
 function displayChart() {
@@ -439,13 +440,71 @@ function displayChart() {
         }, options: {
             responsive: true,
             plugins: {
-                legend: {position: 'top'},
-                title: {display: true, text: 'Disease Spread'}
+                legend: {position: 'top', labels: {color: 'white'}},
+                title: {display: true, text: 'Disease Spread', color: 'white'}
+            },
+            scales: {
+                x: {title: {display: true, color: 'white', text:'Day'}, ticks: {color: 'white'}},
+                y: {title: {display: true, color: 'white', text:'Population'},ticks: {color: 'white'}}
             }
         }
     });
 }
 
 document.getElementById('center').addEventListener('click', () => {
+    console.log(renderer.getCamera().getState())
     map.setView([25, 10], 2.95);
+    renderer.getCamera().setState({
+            x: 0.5,
+            y: 0.5,
+            ratio: 1
+        });
+});
+
+const bindSlider = (id) => {
+  const slider = document.getElementById(id);
+  const display = document.getElementById(`${id}-value`);
+  slider.addEventListener("input", () => {
+    display.textContent = slider.value;
+  });
+};
+
+const sliderIds = ["infection-rate", "incubation-period", "recovery-period", "immunity-loss", "mortality-rate"];
+
+sliderIds.forEach((id) => {
+    bindSlider(id);
+});
+
+document.getElementById('default').addEventListener('click', () => {
+    setTimeout(() => {
+            sliderIds.forEach((id) => {
+            document.getElementById(`${id}-value`).textContent = document.getElementById(id).value;
+        });
+    }, 0);
+});
+
+document.getElementById('close-form').addEventListener('click', () => {
+    document.getElementById('settings-container').style.display = 'none';
+});
+
+document.getElementById('settings').addEventListener('click', () => {
+    document.getElementById('settings-container').style.display = 'flex';
+});
+
+document.getElementById('submit').addEventListener('click', (e) => {
+    document.getElementById('settings-container').style.display = 'none';
+    speed = speeds[0];
+    speed1.style.backgroundColor = optionbg;
+    speed2.style.backgroundColor = optionbg;
+    state = false;
+    document.getElementById('play-pause').src = 'icons/play.svg';
+    e.preventDefault();
+
+    const formData = new FormData(document.getElementById('settings-form'));
+
+    fetch('http://localhost:5000/settings', {method: 'POST', body: formData})
+    .then(response => response.text())
+    .then(data => {
+        console.log(data);
+    });
 });

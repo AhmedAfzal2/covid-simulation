@@ -27,27 +27,28 @@ def diff_eq(initial, t, N, infct, incub, recov, immloss, death):
     
     return np.array([dSdt, dEdt, dIdt, dRdt, dDdt])
 
-INFECTION_RATE = 0.3
 DENSITY_FACTOR = 0.5
 BASELINE_DENSITY = 100
-INCUBATION_PERIOD = 14
-RECOVERY_PERIOD = 20
-IMMUNITY_LOSS_TIME = 100
 DEVELOPMENT_FACTOR = 1 / 3
-MORTALITY = 0.001
 
 # returns the number of S, E, I, R, D people in the next step
 # population density and human development are used to calculate parameters of SEIRD model
-def get_next_city_step(S, E, I, R, D, density, development):
+def get_next_city_step(S, E, I, R, D, density, development, rates):
+    infection_rate = rates[0]
+    incubation_period = rates[1]
+    recovery_period = rates[2]
+    immunity_loss_time = rates[3]
+    mortality_rate = rates[4]
+        
     N = S + E + I + R
     # infection rate increases logarithmically with density
-    infct = INFECTION_RATE * (1 + 0.5 * math.log(density / BASELINE_DENSITY + 0.5))
-    incub = 1 / INCUBATION_PERIOD
+    infct = infection_rate * (1 + 0.5 * math.log(density / BASELINE_DENSITY + 0.5))
+    incub = 1 / incubation_period
     # recovery period is shorter for more developed countries
-    recov = 1 / (RECOVERY_PERIOD * (1 - development * DEVELOPMENT_FACTOR))
-    immloss = 1 / (IMMUNITY_LOSS_TIME)
+    recov = 1 / (recovery_period * (1 - development * DEVELOPMENT_FACTOR))
+    immloss = 1 / (immunity_loss_time)
     # death rate reduces quadratically with development
-    death = MORTALITY * (1 - development * development * DEVELOPMENT_FACTOR)
+    death = mortality_rate * (1 - development * development * DEVELOPMENT_FACTOR)
     
     output = rk4_step(diff_eq, np.array([S, E, I, R, D]), 0, 1, N, infct, incub, recov, immloss, death)
     

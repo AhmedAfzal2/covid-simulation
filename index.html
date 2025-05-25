@@ -15,14 +15,111 @@
     <div id="chart-container">
       <div id="chart-content">
         <span class="close">&times;</span>
-        <canvas id="linechart" height="400px", width="600px"></canvas>
+        <canvas id="linechart" height="400px" , width="600px"></canvas>
+      </div>
+    </div>
+    <div id="settings-container">
+      <div id="settings-content">
+        <div class="form-heading">
+          <div id="close-form">&times;</div>
+          Settings
+        </div>
+        <form id="settings-form">
+          <div id="form-flex">
+            <label for="infection-rate">Infection Rate:</label><br />
+            <div>
+              <input
+                type="range"
+                id="infection-rate"
+                name="infection_rate"
+                min="0.01"
+                max="0.99"
+                step="0.01"
+                value="0.3"
+              />
+              <span id="infection-rate-value">0.3</span><br /><br />
+            </div>
+            <label for="incubation-period">Incubation Period:</label><br />
+            <div>
+              <input
+                type="range"
+                id="incubation-period"
+                name="incubation_period"
+                min="1"
+                max="99"
+                value="14"
+              />
+              <span id="incubation-period-value">14</span><br /><br />
+            </div>
+            <label for="recovery-period">Recovery Period:</label><br />
+            <div>
+              <input
+                type="range"
+                id="recovery-period"
+                name="recovery_period"
+                min="1"
+                max="99"
+                value="20"
+              />
+              <span id="recovery-period-value">20</span><br /><br />
+            </div>
+            <label for="immunity-loss">Immunity Loss:</label><br />
+            <div>
+              <input
+                type="range"
+                id="immunity-loss"
+                name="immunity_loss"
+                min="1"
+                max="999"
+                value="100"
+              />
+              <span id="immunity-loss-value">100</span><br /><br />
+            </div>
+            <label for="mortality-rate">Mortality Rate:</label><br />
+            <div>
+              <input
+                type="range"
+                id="mortality-rate"
+                name="mortality_rate"
+                min="0.001"
+                max="0.999"
+                step="0.001"
+                value="0.001"
+              />
+              <span id="mortality-rate-value">0.001</span><br /><br />
+            </div>
+            <label for="quarantine">Quarantine:</label>
+            <div class="checkbox-container">
+              <input
+                type="checkbox"
+                name="quarantine"
+                id="quarantine"
+                checked
+              />
+            </div>
+            <label for="vaccination">Vaccination:</label>
+            <div class="checkbox-container">
+              <input
+                type="checkbox"
+                name="vaccination"
+                id="vaccination"
+                checked
+              />
+            </div>
+          </div>
+          <div id="form-buttons">
+            <button type="reset" id="default">Set to Default</button>
+            <button type="submit" id="submit">Update Parameters</button>
+          </div>
+        </form>
       </div>
     </div>
     <div id="overlay">
-      <img id='center' src="icons/center.svg" />
+      <img id="center" src="icons/center.svg" />
       <div id="top-left">
         <div id="switch-tab">Show underlying graph</div>
-        <img id="chart-button" src="icons/chart.svg"></img>
+        <img id="chart-button" src="icons/chart.svg" />
+        <img id="settings" src="icons/settings.svg" />
       </div>
       <div id="top-right">
         <div id="controls">

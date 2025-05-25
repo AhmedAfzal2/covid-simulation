@@ -49,17 +49,25 @@ html, body {
     position: absolute;
 }
 
-#chart-button {
+#chart-button, #settings {
     height: 2rem;
+    padding: 2px;
     background-color: var(--option_bg);
     border: solid 1px white;
+    border-top: none;
     cursor: pointer;
+}
+
+#settings {
+    position: absolute;
+    border-left: none;
 }
 
 #switch-tab {
     color: white;
     background-color: var(--option_bg);
     cursor: pointer;
+    font-size: 1.1rem;
     padding: 0.3em;
     border: solid 1px white;
 }
@@ -99,6 +107,7 @@ html, body {
     color: white;
     font-size: 1.5rem;
     border: solid 1px white;
+    border-top: none;
 }
 
 #play-pause, #speed1, #speed2 {
@@ -146,7 +155,7 @@ ul {
     padding-left: 2rem;
 }
 
-#chart-container {
+#chart-container, #settings-container {
     display: none;
     position: absolute;
     width: 100vw;
@@ -157,15 +166,93 @@ ul {
     align-items: center;
 }
 
+#settings-container {
+    flex-direction: column;
+}
+
+#settings-content {
+    background-color: rgba(0,0,0,0.85);
+    color: white;
+    width: 30%;
+    border-radius: 1rem;
+    border: solid 4px #888;
+}
+
+input[type=checkbox] {
+    accent-color: #b00;
+}
+
+.checkbox-container {
+    display: flex;
+    width: 6rem;
+    justify-content: flex-start;
+}
+
+#form-buttons {
+    padding: 0 2rem 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+#form-buttons button {
+    background-color: #a00;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+    font-family: 'Courier New', Courier, monospace;
+    border: solid 1px #f44;
+    padding: 0.5rem 1rem;
+    border-radius: 2px 16px 2px 16px;
+}
+
+#form-buttons button:hover {
+    cursor: pointer;
+    background-color: #800;
+    border-color: #f00;
+}
+ 
+#form-flex {
+    display: flex;
+    gap: 1.4rem;
+    padding: 2rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+#form-flex span {
+    display: inline-block;
+    text-align: right;
+    width: 3rem;
+}
+
+label {
+    font-size: 1.1rem;
+}
+
+input[type=range] {
+    accent-color: #b00;
+    width: 12rem;
+}
+
+.form-heading {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.8rem;
+    border-bottom: solid 1px white;
+    padding: 0.65rem;
+}
+
 #chart-content {
-    background-color: #fff;
+    background-color: #000;
+    color: white;
     padding: 20px;
     padding-top: 10px;
     border-radius: 16px;
     border: solid 4px #888;
 }
 
-.close {
+.close, #close-form {
     font-size: 2rem;
     cursor: pointer;
     position: absolute;

@@ -29,10 +29,13 @@ fetch(
 });
 
 let countryInfo = {};
+let sessionID;
 // graph data
 fetch('/graph')
     .then(response => response.json())
     .then(data => {
+        sessionID = data.sessionID;
+        console.log("Session ID: ", sessionID);
         drawGraph(data);
         countryInfo = data.countries;
         setInfo('World');
@@ -89,7 +92,7 @@ function defHighlightedStyle() {
 
 function addEvents(feature, layer) {
     layer.on({
-        mouseover: (e) => countryHover(e, feature),
+        mouseover: (e) => countryHover(e, feature, layer),
         mouseout: (e) => resetCountry(e, feature),
         click: () => countryClick(feature)
     });
@@ -140,14 +143,15 @@ function setInfo(country) {
         recov.textContent = countryInfo[country][1].toLocaleString();
         dead.textContent = countryInfo[country][2].toLocaleString();
     } catch (e) {
-        console.log(country, e);
+        console.log(country, "error");
     }
 }
 
 let hoveredCountry = 'World';
-function countryHover(e, feature) {
+function countryHover(e, feature, layer) {
     hoveredCountry = feature.properties.name;
     e.target.setStyle(feature.properties.highlightedStyle);
+    layer.bringToFront();
     setInfo(feature.properties.name);
 }
 
@@ -170,10 +174,12 @@ const countries = {}
 let firstSwitch = true;
 
 let renderer;
+let startNode;
 // creates graph and initializes renderer
 function drawGraph(data) {
     data.nodes.forEach(n => {
-        graph.addNode(n.id, n, {'color': '#ffffff'});
+        graph.addNode(n.id, n);
+        graph.setNodeAttribute(n.id, 'color', '#bbb');
     });
 
     data.edges.forEach(e => {
@@ -192,7 +198,8 @@ function drawGraph(data) {
         onSwitchTabClick();
     });
 
-    const n = data.startNode
+    const n = data.startNode;
+    startNode = n;
     graph.setNodeAttribute(n.id, 'color', `rgba(${n.color[0]}, 0, ${n.color[2]}, ${n.color[1]})`);
     infectedNodes[n.id] = ({'lat': graph.getNodeAttribute(n.id, 'lat'), 'lon': graph.getNodeAttribute(n.id, 'lon'), 'radius': n.radius, 'color': `rgb(${n.color[0]}, ${n.color[2]}, 0)`});
     infectedLayer.setNodes(Object.values(infectedNodes));
@@ -235,6 +242,8 @@ const playPause = document.getElementById('play-pause');
 const optionbg = document.getElementById('controls').style.backgroundColor
 let state = false        // false -> paused
 playPause.addEventListener('click', () => {
+    if (!sessionID)
+        return;
     speed1.style.backgroundColor = optionbg;
     speed2.style.backgroundColor =  optionbg;
     speed = speeds[0];
@@ -275,11 +284,15 @@ async function step() {
         updateNodes(stepData);
 
     try {
-        const response = await fetch('/update');
+        const response = await fetch('/update', {method: 'POST', headers: {'sessionID': sessionID}});
         const data = await response.json();
-        day += 1;
-        dayDiv.textContent = `Day ${day}`
-        stepData = data;
+        if (!data.failed) {
+            day += 1;
+            dayDiv.textContent = `Day ${day}`
+            stepData = data;
+        } else {
+            stepData = null;
+        }
     } catch (err) {
         console.error(err);
     }
@@ -290,7 +303,7 @@ async function step() {
 
 let infectedLayer = new InfectedLayer([], {});
 map.addLayer(infectedLayer);
-const infectedNodes = {};
+let infectedNodes = {};
 
 const S = []
 const E = []
@@ -361,7 +374,6 @@ function highlightEdge(edge) {
     } else {
         const src = Number(graph.source(edge));
         const dest = Number(graph.target(edge));
-        console.log(src, dest, 'e')
         if (!(src in airports) || !(dest in airports))
             return;
         const line = L.polyline([airports[src], airports[dest]], {
@@ -492,19 +504,37 @@ document.getElementById('settings').addEventListener('click', () => {
 });
 
 document.getElementById('submit').addEventListener('click', (e) => {
-    document.getElementById('settings-container').style.display = 'none';
-    speed = speeds[0];
-    speed1.style.backgroundColor = optionbg;
-    speed2.style.backgroundColor = optionbg;
-    state = false;
-    document.getElementById('play-pause').src = "/static/icons/play.svg";
     e.preventDefault();
-
     const formData = new FormData(document.getElementById('settings-form'));
-
-    fetch('/settings', {method: 'POST', body: formData})
-    .then(response => response.text())
+    fetch('/settings', {method: 'POST', headers: {'sessionID': sessionID}, body: formData})
+    .then(response => response.json())
     .then(data => {
-        console.log(data);
+        if (data.node == -1) {
+            document.getElementById('start-node').style.border = 'solid 2px yellow';
+            return;
+        }
+        document.getElementById('start-node').style.border = 'solid 1px red';
+        document.getElementById('settings-container').style.display = 'none';
+        document.getElementById('play-pause').src = "/static/icons/play.svg";
+        state = false;
+        speed = speeds[0];
+        speed1.style.backgroundColor = optionbg;
+        speed2.style.backgroundColor = optionbg;
+        stepData = null;
+
+        day = 0;
+        infectedNodes = {};
+        startNode = data.node;
+        graph.forEachNode((n) => {graph.setNodeAttribute(n, 'color', '#bbb')})
+        graph.setNodeAttribute(startNode.id, 'color', `rgba(${startNode.color[0]}, 0, ${startNode.color[2]}, ${startNode.color[1]})`);
+        infectedNodes[startNode.id] = ({'lat': graph.getNodeAttribute(startNode.id, 'lat'), 'lon': graph.getNodeAttribute(startNode.id, 'lon'), 'radius': startNode.radius, 'color': `rgb(${startNode.color[0]}, ${startNode.color[2]}, 0)`});
+        infectedLayer.setNodes(Object.values(infectedNodes));
+        countryInfo = data.countries;
     });
+});
+
+window.addEventListener("unload", function () {
+  const data = String(sessionID);
+
+  navigator.sendBeacon("/end", data);
 });

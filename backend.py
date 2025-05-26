@@ -122,7 +122,7 @@ def getGraph():
 @app.route('/settings', methods=['POST'])
 def updateSettings():
     id = int(request.headers.get('sessionID'))
-    if id not in session:
+    if id not in sessions:
         return
     session = sessions[id]
     settings = request.form
